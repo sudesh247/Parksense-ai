@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ParkSense AI — Smart Parking Analytics Platform</title>
+  <meta name="description" content="AI-powered smart parking management, floor analytics, and hybrid RAG assistant.">
+  
+  <!-- Modern Font Stack & Plotly CDN -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+  
+  <link rel="stylesheet" href="static/css/styles.css">
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Fixed Sidebar Navigation -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">🅿️</div>
+        <div class="brand-text">
+          <span class="brand-name">ParkSense</span>
+          <span class="brand-badge">AI Platform</span>
+        </div>
+      </div>
+      
+      <nav class="nav-menu">
+        <button class="nav-item active" data-view="dashboard" id="nav-dashboard">
+          <span class="nav-icon">📊</span>
+          <span class="nav-label">Dashboard</span>
+        </button>
+        <button class="nav-item" data-view="slots" id="nav-slots">
+          <span class="nav-icon">🚗</span>
+          <span class="nav-label">Slots Grid</span>
+        </button>
+        <button class="nav-item" data-view="bookings" id="nav-bookings">
+          <span class="nav-icon">📋</span>
+          <span class="nav-label">Bookings</span>
+        </button>
+        <button class="nav-item" data-view="assistant" id="nav-assistant">
+          <span class="nav-icon">🤖</span>
+          <span class="nav-label">AI Assistant</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="system-status">
+          <span class="status-dot" id="system-status-dot"></span>
+          <span class="status-text" id="system-status-text">Checking status...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Workspace Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <h1 class="page-title" id="page-title">Dashboard Overview</h1>
+        <div class="topbar-right">
+          <div class="live-clock" id="live-clock">--:--:--</div>
+          <button class="btn btn-secondary btn-sm" id="btn-refresh-data">
+            <span class="icon">🔄</span> Refresh Data
+          </button>
+        </div>
+      </header>
+
+      <!-- View Containers -->
+
+      <!-- 1. DASHBOARD VIEW -->
+      <section class="view-container active" id="view-dashboard">
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Overall Occupancy</span>
+              <span class="stat-icon">📈</span>
+            </div>
+            <div class="stat-value mono" id="stat-occupancy">0%</div>
+            <div class="stat-subtext" id="stat-occupancy-sub">0 / 0 slots filled</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Today's Revenue</span>
+              <span class="stat-icon">💰</span>
+            </div>
+            <div class="stat-value mono" id="stat-revenue">₹0</div>
+            <div class="stat-subtext" id="stat-revenue-sub">Avg ticket: ₹0</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Active Vehicles</span>
+              <span class="stat-icon">🚙</span>
+            </div>
+            <div class="stat-value mono" id="stat-active-vehicles">0</div>
+            <div class="stat-subtext">Currently parked in facility</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Available Slots</span>
+              <span class="stat-icon">✅</span>
+            </div>
+            <div class="stat-value mono" id="stat-available-slots">0</div>
+            <div class="stat-subtext">Ready for entry</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">EV Charging Available</span>
+              <span class="stat-icon">⚡</span>
+            </div>
+            <div class="stat-value mono" id="stat-ev-slots">0 / 0</div>
+            <div class="stat-subtext">EV bays ready</div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-header">
+              <span class="stat-title">Today's Bookings</span>
+              <span class="stat-icon">📝</span>
+            </div>
+            <div class="stat-value mono" id="stat-today-bookings">0</div>
+            <div class="stat-subtext">Total entries recorded today</div>
+          </div>
+        </div>
+
+        <!-- Plotly Charts Grid -->
+        <div class="charts-grid">
+          <div class="chart-card large">
+            <div class="chart-header">
+              <h3>14-Day Revenue Trend</h3>
+            </div>
+            <div class="chart-body" id="chart-revenue-trend"></div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-header">
+              <h3>Occupancy by Floor</h3>
+            </div>
+            <div class="chart-body" id="chart-occupancy-floor"></div>
+          </div>
+
+          <div class="chart-card large">
+            <div class="chart-header">
+              <h3>Today's Hourly Vehicle Movement</h3>
+            </div>
+            <div class="chart-body" id="chart-vehicle-movement"></div>
+          </div>
+        </div>
+
+        <!-- Floor Breakdown Table -->
+        <div class="table-card">
+          <div class="table-header">
+            <h3>Floor-wise Facility Breakdown</h3>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Floor</th>
+                  <th>Total Slots</th>
+                  <th>Available</th>
+                  <th>Occupied</th>
+                  <th>Reserved</th>
+                  <th>Occupancy Rate</th>
+                </tr>
+              </thead>
+              <tbody id="floor-breakdown-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. SLOTS GRID VIEW -->
+      <section class="view-container" id="view-slots">
+        <div class="filters-bar">
+          <div class="filter-group">
+            <input type="text" id="slot-search" class="input-control" placeholder="Search slot number (e.g. F1-A03)...">
+          </div>
+          <div class="filter-group">
+            <select id="filter-floor" class="select-control">
+              <option value="">All Floors</option>
+              <option value="1">Floor 1</option>
+              <option value="2">Floor 2</option>
+              <option value="3">Floor 3</option>
+              <option value="4">Floor 4</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="filter-status" class="select-control">
+              <option value="">All Statuses</option>
+              <option value="available">Available</option>
+              <option value="occupied">Occupied</option>
+              <option value="reserved">Reserved</option>
+            </select>
+          </div>
+          <div class="filter-group">
+            <select id="filter-vehicle-type" class="select-control">
+              <option value="">All Vehicle Types</option>
+              <option value="car">Car</option>
+              <option value="bike">Bike</option>
+              <option value="suv">SUV</option>
+            </select>
+          </div>
+          <div class="filter-group checkboxes">
+            <label class="checkbox-label"><input type="checkbox" id="filter-ev"> ⚡ EV Only</label>
+            <label class="checkbox-label"><input type="checkbox" id="filter-disabled"> ♿ Accessible Only</label>
+          </div>
+          <button class="btn btn-secondary" id="btn-clear-filters">Clear Filters</button>
+        </div>
+
+        <div class="slots-grid-container" id="slots-grid">
+          <!-- Dynamically populated slot cards -->
+        </div>
+      </section>
+
+      <!-- 3. BOOKINGS VIEW -->
+      <section class="view-container" id="view-bookings">
+        <div class="table-card">
+          <div class="table-header flex-between">
+            <h3>All Facility Bookings</h3>
+            <div class="filter-group">
+              <select id="booking-status-filter" class="select-control">
+                <option value="">All Statuses</option>
+                <option value="active">Active Only</option>
+                <option value="completed">Completed Only</option>
+                <option value="cancelled">Cancelled Only</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Slot</th>
+                  <th>Vehicle Number</th>
+                  <th>Type</th>
+                  <th>Driver Name</th>
+                  <th>Entry Time</th>
+                  <th>Exit Time</th>
+                  <th>Amount</th>
+                  <th>Status</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody id="bookings-tbody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. ASSISTANT CHAT VIEW -->
+      <section class="view-container" id="view-assistant">
+        <div class="chat-wrapper">
+          <div class="chat-header">
+            <div class="assistant-info">
+              <span class="assistant-avatar">🤖</span>
+              <div>
+                <h3>ParkSense AI Assistant</h3>
+                <span class="assistant-status">Hybrid Router (SQL + FAISS RAG)</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="chat-body" id="chat-messages">
+            <div class="chat-message assistant">
+              <div class="message-content">
+                Hello! I am ParkSense AI. Ask me about live slot availability, revenue analytics, parking tariffs, overstay penalties, or EV charging policies!
+              </div>
+              <div class="message-meta">System • Just now</div>
+            </div>
+          </div>
+
+          <div class="chat-suggestions" id="chat-suggestions">
+            <button class="chip" data-question="Which parking slots are available?">Which slots are available?</button>
+            <button class="chip" data-question="Show available slots on Floor 2">Show slots on Floor 2</button>
+            <button class="chip" data-question="Show EV charging slots">Show EV slots</button>
+            <button class="chip" data-question="Show today's parking revenue">Today's parking revenue</button>
+            <button class="chip" data-question="What are today's parking charges?">Parking tariffs & rates</button>
+            <button class="chip" data-question="What happens if I overstay?">Overstay penalty rules</button>
+          </div>
+
+          <form class="chat-input-form" id="chat-form">
+            <input type="text" id="chat-input" class="input-control" placeholder="Ask a question about live slots or parking rules..." autocomplete="off">
+            <button type="submit" class="btn btn-primary" id="btn-chat-send">Send ➔</button>
+          </form>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Booking Modal -->
+  <div class="modal-overlay" id="booking-modal">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>Reserve Slot <span id="modal-slot-number">--</span></h3>
+        <button class="btn-close" id="btn-close-modal">&times;</button>
+      </div>
+      <form id="form-create-booking">
+        <input type="hidden" id="modal-slot-id">
+        <div class="form-group">
+          <label>Floor</label>
+          <input type="text" id="modal-floor" class="input-control" readonly>
+        </div>
+        <div class="form-group">
+          <label>Hourly Rate</label>
+          <input type="text" id="modal-price" class="input-control" readonly>
+        </div>
+        <div class="form-group">
+          <label>Vehicle Plate Number *</label>
+          <input type="text" id="modal-vehicle-number" class="input-control" placeholder="e.g. MH02-CB9876" required>
+        </div>
+        <div class="form-group">
+          <label>Vehicle Type *</label>
+          <select id="modal-vehicle-type" class="select-control" required>
+            <option value="car">Car</option>
+            <option value="bike">Bike</option>
+            <option value="suv">SUV</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Driver Full Name (Optional)</label>
+          <input type="text" id="modal-driver-name" class="input-control" placeholder="e.g. Aarav Sharma">
+        </div>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-secondary" id="btn-cancel-modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Confirm Booking</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Application Scripts -->
+  <script src="static/js/api.js"></script>
+  <script src="static/js/ui.js"></script>
+  <script src="static/js/dashboard.js"></script>
+  <script src="static/js/slots.js"></script>
+  <script src="static/js/bookings.js"></script>
+  <script src="static/js/assistant.js"></script>
+</body>
+</html>
